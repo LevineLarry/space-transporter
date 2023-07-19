@@ -6,13 +6,12 @@ pub mod systems;
 use components::*;
 use systems::*;
 
-use crate::planet::components::Planet;
-
 pub struct InfoTextPlugin;
 
 impl Plugin for InfoTextPlugin {
     fn build(&self, app: &mut App) {
         app
-            .add_systems(Update, update_text::<Planet>);
+            .add_systems(Update, update_ship_info_text)
+            .add_systems(Update, update_planet_info_text);
     }
 }

@@ -19,7 +19,6 @@ impl Plugin for PlanetPlugin {
     fn build(&self, app: &mut App) {
         app
             .add_systems(Update, progress_orbits)
-            .add_systems(Update, update_text)
             .add_systems(Update, update_crew_waiting);
     }
 }

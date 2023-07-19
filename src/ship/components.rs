@@ -8,7 +8,8 @@ pub struct Ship {
     pub x: f32,
     pub y: f32,
     pub has_arrived: bool,
-    pub crewmembers: u32
+    pub crewmembers: u32,
+    pub capacity: u32
 }
 
 impl WindowTransform for Ship {
@@ -27,7 +28,8 @@ impl Default for Ship {
             x: 0.0,
             y: 0.0,
             has_arrived: false,
-            crewmembers: 0
+            crewmembers: 0,
+            capacity: 10
         }
     }
 }
@@ -48,6 +50,19 @@ impl Ship {
             return true;
         } else {
             return false;
+        }
+    }
+
+    pub fn unload_crew(&mut self) {
+        self.crewmembers = 0;
+    }
+
+    pub fn load_crew(&mut self, target_planet: &mut Planet) {
+        let excess_capacity = self.capacity - self.crewmembers;
+        if excess_capacity > 0 {
+            let crew_to_load = excess_capacity.min(target_planet.crew_waiting);
+            self.crewmembers += crew_to_load;
+            target_planet.crew_waiting -= crew_to_load;
         }
     }
 }

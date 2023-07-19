@@ -3,6 +3,7 @@ use bevy::window::PrimaryWindow;
 use rand::prelude::*;
 
 use crate::WindowTransform;
+use crate::infotext::systems::spawn_info_text;
 
 use super::*;
 use super::components::*;
@@ -61,26 +62,7 @@ pub fn spawn_planet(
 
     planet_entity.insert(planet.clone());
 
-    let font = asset_server.load("fonts/Roboto-Regular.ttf");
-    let text_style = TextStyle {
-        font: font.clone(),
-        font_size: 20.0,
-        color: Color::WHITE,
-    };
-
-    let planet_info_text = PlanetInfoText {
-        target: Some(planet_entity.id()),
-        text: format!("0 crew waiting")
-    };
-
-    commands.spawn(
-        Text2dBundle {
-            text: Text::from_section(&planet_info_text.text, text_style.clone())
-                .with_alignment(TextAlignment::Center),
-            transform: Transform::from_xyz(window_coords.x, window_coords.y - 80., 0.0),
-            ..default()
-        }
-    ).insert(planet_info_text);
+    spawn_info_text(planet_entity.id(), planet.clone(), &window, commands, "0 crew waiting".to_string(), asset_server);
 
     planet
 }
@@ -107,44 +89,6 @@ pub fn progress_orbits(
         let new_window_position = planet.to_window_coordinates(&window);
         planet_transform.translation = Vec3::new(new_window_position.x, new_window_position.y, 0.0);
         planet_transform.rotation = Quat::from_rotation_z(new_phase_angle + 0.5);
-    }
-}
-
-/**
- * Finds the planet that each text entity is parented by, and updates the position & text content of the text
- */
-pub fn update_text(
-    window_query: Query<&Window, With<PrimaryWindow>>,
-    planets_query: Query<(&Planet, Entity)>,
-    mut planet_info_text_query: Query<(&mut Transform, &mut PlanetInfoText, &mut Text)>,
-) {
-    let window = window_query.get_single().unwrap();
-
-    for (mut text_transform, mut info_text, mut text) in planet_info_text_query.iter_mut() {
-        if info_text.target.is_none() {
-            println!("Text has no target");
-            continue;
-        }
-
-        let target_planet_entity = info_text.target.expect("Text has no target");
-        let mut target_planet: Option<&Planet> = None;
-
-        for (planet, planet_entity) in planets_query.iter() {
-            if planet_entity == target_planet_entity {
-                target_planet = Some(planet);
-                break;
-            }
-        }
-
-        if target_planet.is_none() {
-            println!("Text has no parent planet");
-            continue;
-        }
-
-        let target_planet_window_coords = target_planet.unwrap().to_window_coordinates(&window);
-        info_text.text = format!("{} crew waiting", target_planet.unwrap().crew_waiting);
-        text_transform.translation = Vec3::new(target_planet_window_coords.x, target_planet_window_coords.y - 80., 0.0);
-        text.sections[0].value = info_text.text.clone();
     }
 }
 

@@ -8,7 +8,7 @@ pub struct Planet {
     pub x: f32,
     pub y: f32,
     pub phase_angle: f32,
-    pub crew_waiting: i32,
+    pub crew_waiting: u32,
     pub time_since_last_crew_update: f32,
 }
 
