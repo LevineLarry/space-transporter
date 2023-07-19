@@ -8,7 +8,8 @@ pub struct Planet {
     pub x: f32,
     pub y: f32,
     pub phase_angle: f32,
-    pub crew_waiting: i32
+    pub crew_waiting: i32,
+    pub time_since_last_crew_update: f32,
 }
 
 impl WindowTransform for Planet {
@@ -19,8 +20,21 @@ impl WindowTransform for Planet {
     }
 } 
 
+impl Default for Planet {
+    fn default() -> Self {
+        Planet {
+            orbital_radius: 0.0,
+            x: 0.0,
+            y: 0.0,
+            phase_angle: 0.0,
+            crew_waiting: 0,
+            time_since_last_crew_update: 0.0
+        }
+    }
+}
+
 #[derive(Component)]
-pub struct PlanetDebugText {
+pub struct PlanetInfoText {
     pub target: Option<Entity>,
     pub text: String
 }

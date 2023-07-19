@@ -4,6 +4,7 @@ use bevy::window::PrimaryWindow;
 mod planet;
 mod ship;
 mod star;
+mod infotext;
 
 fn main() {
     App::new()
@@ -11,6 +12,7 @@ fn main() {
         .add_plugins(planet::PlanetPlugin)
         .add_plugins(ship::ShipPlugin)
         .add_plugins(star::StarPlugin)
+        .add_plugins(infotext::InfoTextPlugin)
         .insert_resource(ClearColor(Color::rgb(0., 0., 0.)))
         .add_systems(Startup, spawn_camera)
         .run();

@@ -46,7 +46,7 @@ pub fn spawn_planet(
         x: current_absolute_position.x,
         y: current_absolute_position.y,
         phase_angle,
-        crew_waiting: 0
+        ..default()
     };
 
     let window_coords = planet.to_window_coordinates(&window);
@@ -68,33 +68,32 @@ pub fn spawn_planet(
         color: Color::WHITE,
     };
 
-    let planet_debug_text = PlanetDebugText {
+    let planet_info_text = PlanetInfoText {
         target: Some(planet_entity.id()),
-        text: format!("Orbital radius: {}\nPhase angle: {}\nWindow X: {}\nWindow Y: {}", planet.orbital_radius, planet.phase_angle, planet.to_window_coordinates(&window).x, planet.to_window_coordinates(&window).y)
+        text: format!("0 crew waiting")
     };
 
     commands.spawn(
         Text2dBundle {
-            text: Text::from_section(&planet_debug_text.text, text_style.clone())
+            text: Text::from_section(&planet_info_text.text, text_style.clone())
                 .with_alignment(TextAlignment::Center),
             transform: Transform::from_xyz(window_coords.x, window_coords.y - 80., 0.0),
             ..default()
         }
-    ).insert(planet_debug_text);
+    ).insert(planet_info_text);
 
     planet
 }
 
 pub fn progress_orbits(
     window_query: Query<&Window, With<PrimaryWindow>>,
-    mut planets_query: Query<(&mut Transform, &mut Planet, Entity), Without<PlanetDebugText>>,
-    mut planet_debug_text_query: Query<(&mut Transform, &mut PlanetDebugText, &mut Text), Without<Planet>>,
+    mut planets_query: Query<(&mut Transform, &mut Planet)>,
     time: Res<Time>
 ) {
     let window = window_query.get_single().unwrap();
     let ds = time.delta_seconds() * ORBITAL_SPEED;
 
-    for (mut planet_transform, mut planet, planet_entity) in planets_query.iter_mut() { 
+    for (mut planet_transform, mut planet) in planets_query.iter_mut() { 
         let d_theta = ds / planet.orbital_radius; //Arc length
         let new_phase_angle = planet.phase_angle + d_theta;
         let new_absolute_position = Vec2::new(
@@ -108,21 +107,59 @@ pub fn progress_orbits(
         let new_window_position = planet.to_window_coordinates(&window);
         planet_transform.translation = Vec3::new(new_window_position.x, new_window_position.y, 0.0);
         planet_transform.rotation = Quat::from_rotation_z(new_phase_angle + 0.5);
-        
-        for (mut text_transform, mut debug_text, mut text) in planet_debug_text_query.iter_mut() {
-            if debug_text.target.is_none() {
-                println!("Text has no target");
-                continue;
-            }
+    }
+}
 
-            let target = debug_text.target.expect("Text has no target");
+/**
+ * Finds the planet that each text entity is parented by, and updates the position & text content of the text
+ */
+pub fn update_text(
+    window_query: Query<&Window, With<PrimaryWindow>>,
+    planets_query: Query<(&Planet, Entity)>,
+    mut planet_info_text_query: Query<(&mut Transform, &mut PlanetInfoText, &mut Text)>,
+) {
+    let window = window_query.get_single().unwrap();
 
-            if target == planet_entity {
-                //debug_text.text = format!("Orbital radius: {:.2}\nPhase angle: {:.2}\nWindow X: {:.2}\nWindow Y: {:.2}\n Absolute X: {:.2}\nAbsolute Y: {:.2}", planet.orbital_radius, planet.phase_angle, planet.to_window_coordinates(&window).x, planet.to_window_coordinates(&window).y, planet.x, planet.y);
-                debug_text.text = format!("{} crew waiting", planet.crew_waiting);
-                text_transform.translation = Vec3::new(new_window_position.x, new_window_position.y - 80., 0.0);
-                text.sections[0].value = debug_text.text.clone();
+    for (mut text_transform, mut info_text, mut text) in planet_info_text_query.iter_mut() {
+        if info_text.target.is_none() {
+            println!("Text has no target");
+            continue;
+        }
+
+        let target_planet_entity = info_text.target.expect("Text has no target");
+        let mut target_planet: Option<&Planet> = None;
+
+        for (planet, planet_entity) in planets_query.iter() {
+            if planet_entity == target_planet_entity {
+                target_planet = Some(planet);
+                break;
             }
+        }
+
+        if target_planet.is_none() {
+            println!("Text has no parent planet");
+            continue;
+        }
+
+        let target_planet_window_coords = target_planet.unwrap().to_window_coordinates(&window);
+        info_text.text = format!("{} crew waiting", target_planet.unwrap().crew_waiting);
+        text_transform.translation = Vec3::new(target_planet_window_coords.x, target_planet_window_coords.y - 80., 0.0);
+        text.sections[0].value = info_text.text.clone();
+    }
+}
+
+pub fn update_crew_waiting(
+    mut planets_query: Query<&mut Planet>,
+    time: Res<Time>
+) {
+    for mut planet in planets_query.iter_mut() {
+        let crew_added = random::<f32>() * (1./CREW_ADD_SPEED) < planet.time_since_last_crew_update; //Increasing odds that crew will be added as the elapsed time increases
+
+        if crew_added {
+            planet.crew_waiting += 1;
+            planet.time_since_last_crew_update = 0.;
+        } else {
+            planet.time_since_last_crew_update += time.delta_seconds();
         }
     }
 }
